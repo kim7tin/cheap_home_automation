@@ -3,8 +3,8 @@
   "capabilities": [
     "configurable"
   ],
-  "companyName": "Meiguro",
-  "longName": "Pebble.js",
+  "companyName": "Hs2T",
+  "longName": "Nino assistant",
   "resources": {
     "media": [
       {
@@ -51,7 +51,7 @@
     ]
   },
   "sdkVersion": "3",
-  "shortName": "Pebble.js",
+  "shortName": "Nino",
   "targetPlatforms": [
     "aplite",
     "basalt",

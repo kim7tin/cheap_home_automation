@@ -133,4 +133,4 @@ function start(websocketServerLocation) {
 	};
 }
 
-start("ws://192.168.7.6:1990");
+start("ws://192.168.7.7:1990");
