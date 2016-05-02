@@ -1,0 +1,66 @@
+{
+  "appKeys": {},
+  "capabilities": [
+    "configurable"
+  ],
+  "companyName": "Meiguro",
+  "longName": "Pebble.js",
+  "resources": {
+    "media": [
+      {
+        "file": "images/menu_icon.png",
+        "menuIcon": true,
+        "name": "IMAGE_MENU_ICON",
+        "type": "bitmap"
+      },
+      {
+        "file": "images/logo_splash.png",
+        "name": "IMAGE_LOGO_SPLASH",
+        "type": "bitmap"
+      },
+      {
+        "file": "images/tile_splash.png",
+        "name": "IMAGE_TILE_SPLASH",
+        "type": "bitmap"
+      },
+      {
+        "file": "images/st_bw.png",
+        "name": "IMAGE_STARTUP_BLACKWHITE",
+        "type": "bitmap"
+      },
+      {
+        "file": "images/st_cl.png",
+        "name": "IMAGE_STARTUP_BG_COLOR",
+        "type": "bitmap"
+      },
+      {
+        "file": "fonts/UbuntuMono-Regular.ttf",
+        "name": "MONO_FONT_14",
+        "type": "font"
+      },
+      {
+        "file": "images/icons/ventilation.png",
+        "name": "ICON_VENTILATION",
+        "type": "bitmap"
+      },
+      {
+        "file": "images/icons/bulb.png",
+        "name": "ICON_BULB",
+        "type": "bitmap"
+      }
+    ]
+  },
+  "sdkVersion": "3",
+  "shortName": "Pebble.js",
+  "targetPlatforms": [
+    "aplite",
+    "basalt",
+    "chalk"
+  ],
+  "uuid": "0eac2200-8a79-4183-a54c-dae371e87ce2",
+  "versionCode": 1,
+  "versionLabel": "0.4",
+  "watchapp": {
+    "watchface": false
+  }
+}
