@@ -5,6 +5,9 @@
  */
 package gatewaysmart;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  *
  * @author hs2t
@@ -17,6 +20,13 @@ public class wifi_device {
     public String device_type;
     public String device_icon;
     public String device_relay;
+    
+    //alexa smarthome options
+    
+    public String applianceId, manufacturerName, modelName, version, friendlyName, friendlyDescription;
+    public Boolean isReachable;
+    public String[] actions;
+    public Map additionalApplianceDetails = new HashMap();
 
     public wifi_device(String device_id, String device_name, String device_type, String device_data, String device_icon, String device_relay) {
         this.device_id = device_id;
