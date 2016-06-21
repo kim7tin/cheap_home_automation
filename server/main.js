@@ -3,8 +3,9 @@ var http = require('http');
 
 var server = http.createServer(function(request, response) {
 	console.log((new Date()) + ' Received request for ' + request.url);
+	console.log(request);
 	response.writeHead(404);
-	response.end();
+	response.end("Hello");
 });
 server.listen(2422, function() {
 	console.log((new Date()) + ' Server is listening on port 2422');
