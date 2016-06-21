@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.HashMap;
@@ -16,7 +18,9 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.java_websocket.WebSocket;
+import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ClientHandshake;
+import org.java_websocket.handshake.ServerHandshake;
 import org.java_websocket.server.WebSocketServer;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -34,11 +38,13 @@ public class GatewaySmart {
      */
     public static Map<String, wifi_client> clients = new HashMap<>();
     public static WebSocketServer server;
+    public static WebSocketClient websocket_client;
 
     public static void main(String[] args) throws UnknownHostException {
         new Thread(new socket_thread()).start();
-        server = new websocket_thread(1990);
-        server.run();
+        new Thread(new websocket_client_thread("ws://192.168.7.6:2422")).start();
+//        server = new websocket_thread(1990);
+//        server.run();
     }
 
     public static void sendToAll(String text) {
@@ -47,6 +53,40 @@ public class GatewaySmart {
             for (WebSocket c : con) {
                 c.send(text);
             }
+        }
+    }
+    
+    public static class websocket_client_thread extends Thread{
+        public websocket_client_thread(String uri){
+            try {
+            websocket_client = new WebSocketClient(new URI(uri)) {
+                @Override
+                public void onOpen(ServerHandshake sh) {
+                    System.out.println("onOpen");
+                }
+
+                @Override
+                public void onMessage(String string) {
+                    System.out.println("onMessage");
+                }
+
+                @Override
+                public void onClose(int i, String string, boolean bln) {
+                    System.out.println("onClose");
+                }
+
+                @Override
+                public void onError(Exception excptn) {
+                    System.err.println(excptn);
+                }
+            };
+        } catch (URISyntaxException ex) {
+            Logger.getLogger(GatewaySmart.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        }
+        @Override
+        public void run(){
+            websocket_client.connect();
         }
     }
 
