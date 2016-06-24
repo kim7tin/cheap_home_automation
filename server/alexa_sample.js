@@ -1,11 +1,10 @@
-/**
- * This sample demonstrates a simple driver  built against the Alexa Lighting Api.
- * For additional details, please refer to the Alexa Lighting API developer documentation 
- * https://developer.amazon.com/public/binaries/content/assets/html/alexa-lighting-api.html
- */
 var https = require('https');
-var REMOTE_CLOUD_BASE_PATH = '/';
-var REMOTE_CLOUD_HOSTNAME = 'www.amazon.com';
+
+var kitchenLightApplianceId = "A146-3456-b31d-7ec4c146c5ea";
+var bedroomLightApplianceId = "A146-3456-b31d-7ec4c146c5eb";
+
+var particleServer = "api.particle.io";
+var particlePath = "/v1/devices/";
 
 /**
  * Main entry point.
@@ -23,7 +22,7 @@ exports.handler = function(event, context) {
          * can use the accessToken that is made available as part of the payload to determine
          * the customer.
          */
-        case 'Discovery':
+        case 'Alexa.ConnectedHome.Discovery':
             handleDiscovery(event, context);
             break;
 
@@ -32,7 +31,7 @@ exports.handler = function(event, context) {
              * given device on, off or brighten. This message comes with the "appliance"
              * parameter which indicates the appliance that needs to be acted on.
              */
-        case 'Control':
+        case 'Alexa.ConnectedHome.Control':
             handleControl(event, context);
             break;
 
@@ -47,7 +46,7 @@ exports.handler = function(event, context) {
 };
 
 /**
- * This method is invoked when we receive a "Discovery" message from Alexa Smart Home Skill.
+ * This method is invoked when we receive a "Discovery" message from Alexa Connected Home Skill.
  * We are expected to respond back with a list of appliances that we have discovered for a given
  * customer. 
  */
@@ -57,9 +56,9 @@ function handleDiscovery(accessToken, context) {
      * Crafting the response header
      */
     var headers = {
-        namespace: 'SampleDiscovery',
-        name: 'SampleDiscoverAppliancesResponse',
-        payloadVersion: '1'
+        namespace: 'Alexa.ConnectedHome.Discovery',
+        name: 'DiscoverAppliancesResponse',
+        payloadVersion: '2'
     };
 
     /**
@@ -67,14 +66,21 @@ function handleDiscovery(accessToken, context) {
      */
     var appliances = [];
 
-    var applianceDiscovered = {
-        applianceId: 'Sample-Device-ID',
-        manufacturerName: 'SmartThings',
-        modelName: 'ST01',
+    var kitchenLight = {
+        applianceId: kitchenLightApplianceId,
+        manufacturerName: 'KRV',
+        modelName: 'ParticleLight',
         version: 'VER01',
-        friendlyName: 'Sample Name',
-        friendlyDescription: 'the light in kitchen',
+        friendlyName: 'Kitchen Light',
+        friendlyDescription: 'Particle light in kitchen',
         isReachable: true,
+        actions:[
+            "incrementPercentage",
+            "decrementPercentage",
+            "setPercentage",
+            "turnOn",
+            "turnOff"
+        ],
         additionalApplianceDetails: {
             /**
              * OPTIONAL:
@@ -82,13 +88,43 @@ function handleDiscovery(accessToken, context) {
              * This information will be returned back to the driver when user requests
              * action on this appliance.
              */
-            'fullApplianceId': '2cd6b650-c0h0-4062-b31d-7ec2c146c5ea'
+            fullApplianceId: '2cd6b650-c0h0-4062-b31d-7ec2c146c5ea',
+            deviceId: "39003d000447343232363230"
         }
     };
-    appliances.push(applianceDiscovered);
+    
+    var bedroomLight = {
+        applianceId: bedroomLightApplianceId,
+        manufacturerName: 'KRV',
+        modelName: 'ParticleLight',
+        version: 'VER01',
+        friendlyName: 'Bedroom Light',
+        friendlyDescription: 'Particle light in bedroom',
+        isReachable: true,
+        actions:[
+            "incrementPercentage",
+            "decrementPercentage",
+            "setPercentage",
+            "turnOn",
+            "turnOff"
+        ],
+        additionalApplianceDetails: {
+            /**
+             * OPTIONAL:
+             * We can use this to persist any appliance specific metadata.
+             * This information will be returned back to the driver when user requests
+             * action on this appliance.
+             */
+            fullApplianceId: '2cd6b650-c0h0-4062-b31d-7ec2c146c5eb',
+            deviceId: "39003d000447343232363230"
+        }
+    };
+    
+    appliances.push(kitchenLight);
+    appliances.push(bedroomLight);
 
     /**
-     * Craft the final response back to Alexa Smart Home Skill. This will include all the 
+     * Craft the final response back to Alexa Connected Home Skill. This will include all the 
      * discoverd appliances.
      */
     var payloads = {
@@ -109,53 +145,94 @@ function handleDiscovery(accessToken, context) {
  * This is called when Alexa requests an action (IE turn off appliance).
  */
 function handleControl(event, context) {
-
-    /**
-     * Fail the invocation if the header is unexpected. This example only demonstrates
-     * turn on / turn off, hence we are filtering on anything that is not SwitchOnOffRequest.
-     */
-    if (event.header.namespace != 'Control' || event.header.name != 'SwitchOnOffRequest') {
-        context.fail(generateControlError('SwitchOnOffRequest', 'UNSUPPORTED_OPERATION', 'Unrecognized operation'));
-    }
-
-    if (event.header.namespace === 'Control' && event.header.name === 'SwitchOnOffRequest') {
+    if (event.header.namespace === 'Alexa.ConnectedHome.Control') {
 
         /**
          * Retrieve the appliance id and accessToken from the incoming message.
          */
+        var accessToken = event.payload.accessToken;
         var applianceId = event.payload.appliance.applianceId;
-        var accessToken = event.payload.accessToken.trim();
-        log('applianceId', applianceId);
+        var deviceid = event.payload.appliance.additionalApplianceDetails.deviceId;
+        var message_id = event.header.messageId;
+        var param = "";
+        var index = "0";
+        var state = 0;
+        var confirmation;
+        var funcName;
+        
+        log("Access Token: ", accessToken);
+        log("DeviceID: ", deviceid);
 
-        /**
-         * Make a remote call to execute the action based on accessToken and the applianceId and the switchControlAction
-         * Some other examples of checks:
-         *	validate the appliance is actually reachable else return TARGET_OFFLINE error
-         *	validate the authentication has not expired else return EXPIRED_ACCESS_TOKEN error
-         * Please see the technical documentation for detailed list of errors
-         */
-        var basePath = '';
-        if (event.payload.switchControlAction === 'TURN_ON') {
-            basePath = REMOTE_CLOUD_BASE_PATH + '/' + applianceId + '/on?access_token=' + accessToken;
-        } else if (event.payload.switchControlAction === 'TURN_OFF') {
-            basePath = REMOTE_CLOUD_BASE_PATH + '/' + applianceId + '/of?access_token=' + accessToken;
+        if(event.header.name == "TurnOnRequest"){
+            state = 1;
+            confirmation = "TurnOnConfirmation";
+            funcName = "onoff";
         }
-
+        else if(event.header.name == "TurnOffRequest"){
+            state = 0;            
+            confirmation = "TurnOffConfirmation";
+            funcName = "onoff";
+        }
+        else if(event.header.name == "SetPercentageRequest"){
+            state = event.payload.percentageState.value;
+            confirmation = "SetPercentageConfirmation";
+            funcName = "setvalue";
+        }
+        else if(event.header.name == "IncrementPercentageRequest"){
+            var increment = event.payload.deltaPercentage.value;
+            
+            state += increment;
+            
+            if(state > 100){
+                state = 100;
+            }
+            
+            confirmation = "IncrementPercentageConfirmation";
+            funcName = "setvalue";
+        }
+        else if(event.header.name == "DecrementPercentageRequest"){
+            var decrement = event.payload.deltaPercentage.value;
+            
+            state -= decrement;
+            
+            if(state < 0){
+                state = 0;
+            }
+            
+            confirmation = "DecrementPercentageConfirmation";
+            funcName = "setvalue";
+        }
+        
+        log('applianceId', applianceId);
+        
+        if(applianceId == kitchenLightApplianceId){
+            index = "0";
+        }
+        else if(applianceId == bedroomLightApplianceId){
+            index = "1";
+        }
+        
+        param = index + "=" + state;
+        
         var options = {
-            hostname: REMOTE_CLOUD_HOSTNAME,
+            hostname: particleServer,
             port: 443,
-            path: REMOTE_CLOUD_BASE_PATH,
+            path: particlePath + deviceid + "/" + funcName,
+            method: 'POST',
             headers: {
-                accept: '*/*'
+                'Content-Type': 'application/x-www-form-urlencoded'
             }
         };
+        
+        log(options);
+        
+        var data = "access_token=" + accessToken + "&" + "args=" + param;
+        
+        log(data);
 
         var serverError = function (e) {
             log('Error', e.message);
-            /**
-             * Craft an error response back to Alexa Smart Home Skill
-             */
-            context.fail(generateControlError('SwitchOnOffRequest', 'DEPENDENT_SERVICE_UNAVAILABLE', 'Unable to connect to server'));
+            context.fail(generateControlError('TurnOnRequest', 'DEPENDENT_SERVICE_UNAVAILABLE', 'Unable to connect to server'));
         };
 
         var callback = function(response) {
@@ -166,35 +243,35 @@ function handleControl(event, context) {
             });
 
             response.on('end', function() {
-                /**
-                 * Test the response from remote endpoint (not shown) and craft a response message
-                 * back to Alexa Smart Home Skill
-                 */
-                log('done with result');
+                log('Return Value');
+                log(str);
+                
                 var headers = {
-                    namespace: 'Control',
-                    name: 'SwitchOnOffResponse',
-                    payloadVersion: '1'
+                    namespace: 'Alexa.ConnectedHome.Control',
+                    name: confirmation,
+                    payloadVersion: '2',
+                    messageId: message_id
                 };
                 var payloads = {
-                    success: true
+                    
                 };
                 var result = {
                     header: headers,
                     payload: payloads
                 };
-                log('Done with result', result);
+
                 context.succeed(result);
             });
 
             response.on('error', serverError);
         };
 
-        /**
-         * Make an HTTPS call to remote endpoint.
-         */
-        https.get(options, callback)
-            .on('error', serverError).end();
+        var req = https.request(options, callback);
+            
+        req.on('error', serverError);
+        
+        req.write(data);
+        req.end();
     }
 }
 
@@ -202,9 +279,7 @@ function handleControl(event, context) {
  * Utility functions.
  */
 function log(title, msg) {
-    console.log('*************** ' + title + ' *************');
-    console.log(msg);
-    console.log('*************** ' + title + ' End*************');
+    console.log(title + ": " + msg);
 }
 
 function generateControlError(name, code, description) {
@@ -227,3 +302,4 @@ function generateControlError(name, code, description) {
     };
 
     return result;
+}

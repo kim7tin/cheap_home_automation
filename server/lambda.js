@@ -11,6 +11,7 @@ exports.handler = function(event, context) {
 		handleDiscovery(event, context);
 		break;
 	case 'Alexa.ConnectedHome.Control':
+		console.log(JSON.stringify(event));
 		handleControl(event, context);
 		break;
 	default:
@@ -66,28 +67,61 @@ function handleDiscovery(accessToken, context) {
 }
 
 function handleControl(event, context) {
-	var options = {
-		"hostname" : httpServer,
-		"port" : httpPort,
-		"path" : httpPath,
-		method : 'POST',
-		headers : {
-			'Content-Type' : 'application/json',
+	if (event.header.namespace === 'Alexa.ConnectedHome.Control') {
+		var name, dataSend = {};
+		dataSend.gatewayUuid = event.payload.appliance.additionalApplianceDetails.gatewayUuid;
+		dataSend.deviceUuid = event.payload.appliance.additionalApplianceDetails.deviceUuid;
+
+		switch (event.header.name) {
+		case "TurnOnRequest":
+			name = "TurnOnConfirmation";
+			dataSend.data = 1;
+			break;
+		case "TurnOffRequest":
+			name = "TurnOffConfirmation";
+			dataSend.data = 0;
+			break;
+		default:
+			break;
 		}
-	};
-	var req = http.request(options, function(res) {
-		console.log('Status: ' + res.statusCode);
-		console.log('Headers: ' + JSON.stringify(res.headers));
-		res.setEncoding('utf8');
-		res.on('data', function(body) {
-			console.log('Body: ' + body);
+
+		var options = {
+			"hostname" : httpServer,
+			"port" : httpPort,
+			"path" : httpPath,
+			method : 'POST',
+			headers : {
+				'Content-Type' : 'application/json',
+			}
+		};
+		var req = http.request(options, function(res) {
+			console.log('Status: ' + res.statusCode);
+			console.log('Headers: ' + JSON.stringify(res.headers));
+			res.setEncoding('utf8');
+			res.on("data", function(body) {
+				var headers = {
+					"namespace" : "Alexa.ConnectedHome.Control",
+					"name" : name,
+					"payloadVersion" : 2,
+					"messageId" : event.header.messageId
+				};
+				var payloads = {
+
+				};
+				var result = {
+					header : headers,
+					payload : payloads
+				};
+
+				context.succeed(result);
+			});
 		});
-	});
-	req.on('error', function(e) {
-		console.log('problem with request: ' + e.message);
-	});
-	req.write(JSON.stringify(event));
-	req.end();
+		req.on('error', function(e) {
+			console.log('problem with request: ' + e.message);
+		});
+		req.write(JSON.stringify(dataSend));
+		req.end();
+	}
 }
 
 function log(title, msg) {
