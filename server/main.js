@@ -3,13 +3,8 @@ var http = require('http');
 
 var server = http.createServer(function(request, response) {
 	console.log((new Date()) + ' Received request for ' + request.url);
-	var body = "";
 	request.on('data', function(data) {
-		body += data;
-		console.log("Partial body: " + body);
-	});
-	request.on('end', function() {
-		console.log("Body: " + body);
+		console.log("Partial body: " + data);
 	});
 	response.writeHead(404);
 	response.end("Hello");

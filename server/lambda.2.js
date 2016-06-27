@@ -1,7 +1,7 @@
-var http = require("http");
+var https = require("https");
 
 var httpServer = "reachme.me";
-var httpPort = 2422;
+var httpPort = 443;
 
 var alexa = function() {
 	this.headers = {};
@@ -25,7 +25,7 @@ var server = function(httpPath, dataSend, returnFunction) {
 		}
 	};
 
-	var req = http.request(options, function(res) {
+	var req = https.request(options, function(res) {
 		console.log('Status: ' + res.statusCode);
 		console.log('Headers: ' + JSON.stringify(res.headers));
 		res.setEncoding('utf8');
@@ -114,7 +114,7 @@ function handleControl(event, context) {
 			break;
 		}
 
-		var hs2t = new server("/", dataSend, function(data) {
+		var hs2t = new server("/hs2t/", dataSend, function(data) {
 			console.log(data);
 			echo.succeed();
 		});
